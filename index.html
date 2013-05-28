@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head><title>Heartworm</title></head>
+<body>
+<form>
+  <input type="submit" name="submit" value="Generate a report of">
+  <ul>
+  <li>
+    number of the last days with a low temperature over
+    <input type="input" name="low_t" value="57"> 
+    (degrees fahrenheit)
+  </li>
+  <li>
+    number of those days with a high temperature over
+    <input type="input" name="high_t" value="80"> 
+    (degrees fahrenheit)
+  </li>
+  <li>
+    going back
+    <input type="input" name="days" value="50"> (days)
+  <li>
+    in city
+    <input type="input" name="city" value="4990729"> (city id)
+  </li>
+  </ul>
+</form>
+<div id="output" style="font-family:monospace"></div>
+
+<script type="text/javascript" charset="utf-8">
+function getCounts(city_id, low_t, high_t, days, data, res) {
+  var seconds_per_day = 60 * 60 * 24;
+  var end = Math.floor(new Date().getTime() / 1000) - seconds_per_day;
+  var start = end - days * seconds_per_day;
+  var history = "http://api.openweathermap.org/data/2.1/history/city/" +
+      city_id + "?type=hour" + "&start=" + start + "&end=" + end;
+
+  data.get(history, withHistoryResults);
+
+  function withHistoryResults(results) {
+    window.results = results;
+    var list = results.list;
+  
+    var highs = [];
+    var lows = [];
+    for (var i = 0; i < list.length; i++) {
+      var day = Math.floor((list[i].dt - start) / seconds_per_day);
+      var high = ktof(list[i].main.temp_max);
+      var low = ktof(list[i].main.temp_min);
+      highs[day] = highs[day] == undefined ? high : Math.max(highs[day], high);
+      lows[day] = lows[day] == undefined ? low : Math.min(lows[day], low);
+    }
+    
+    detect(highs, lows);
+  }
+
+  function detect(highs, lows) {
+    if (highs.length != lows.length) throw "fail";
+    
+    window.highs = highs;
+    window.lows = lows;
+    
+    // Days with a low temp over low_t.
+    var low_count = 0;
+    
+    // Days with a high temp over high_t.
+    var high_count = 0;
+    
+    for (var i = lows.length - 1; i >= 0; i--) {
+      if (lows[i] >= low_t) {
+        low_count++;
+        if (highs[i] >= high_t) {
+          high_count++;
+        }
+      } else {
+        break;
+      }
+    }
+    
+    res(low_count, high_count);
+  }
+}
+
+var form = document.getElementsByTagName("form")[0];
+var output = document.getElementById("output");
+
+form.onsubmit = function (evt) {
+  evt.preventDefault();
+  log("working...");
+  getCounts(form.city.value, this.low_t.value, this.high_t.value,
+      this.days.value, new Jsonp(), res);
+}
+
+function log() {
+  output.innerHTML += Array.prototype.join.call(arguments, " ") + "<br>";
+}
+
+function res(low_count, high_count) {
+  if (low_count == 0) {
+    log("none of the last", form.days.value, "days had a low over",
+        form.low_t.value);
+  } else {
+    log("the last", low_count, "days had a low over", form.low_t.value);
+    if (low_count == form.days.value) log("(of", form.days.value, "days)");
+    log("of those,", high_count, "days had a high over", form.high_t.value);
+  }
+}
+
+function ktof(k) {
+  return Math.round(k * 9 / 5 - 459.67);
+}
+
+function Jsonp() {
+  this.n = 1;
+  this.get = function (url, cb) {
+    var script = document.body.appendChild(
+        document.createElement("script"));
+    var jsonp_f = "json_f"+this.n++;
+    script.src = url + "&callback=" + jsonp_f;
+    window[jsonp_f] = cb;
+  };
+}
+</script>
