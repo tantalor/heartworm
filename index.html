@@ -19,14 +19,8 @@
     going back
     <input type="input" name="days" value="50"> (days)
   <li>
-    in city
-    <input type="input" name="city" value="4990729"> (city id)
-    <i>
-    see
-    <a href="http://bugs.openweathermap.org/projects/api/wiki/API_2_1#Find-City-via-name">
-      openweathermap.org
-    </a>
-    </i>
+    in
+    <input type="input" name="city" value="Detroit"> (city)
   </li>
   </ul>
 </form>
@@ -37,10 +31,10 @@ function getCounts(city_id, low_t, high_t, days, data, res) {
   var seconds_per_day = 60 * 60 * 24;
   var end = Math.floor(new Date().getTime() / 1000) - seconds_per_day;
   var start = end - days * seconds_per_day;
-  var history = "http://api.openweathermap.org/data/2.1/history/city/" +
-      city_id + "?type=hour" + "&start=" + start + "&end=" + end;
+  var historyUrl = "http://api.openweathermap.org/data/2.1/history/city/" +
+      city_id + "?type=hour&start=" + start + "&end=" + end;
 
-  data.get(history, withHistoryResults);
+  data.get(historyUrl, withHistoryResults);
 
   function withHistoryResults(results) {
     window.results = results;
@@ -92,25 +86,33 @@ var jsonp = new Jsonp();
 
 form.onsubmit = function (evt) {
   evt.preventDefault();
+  getCityId(jsonp, form.city.value, getCountsWithCityId, function () {
+    log('cannot find', form.city.value);
+  });
+}
+
+function getCountsWithCityId(city_id, city) {
   log("working...");
-  getCounts(form.city.value, this.low_t.value, this.high_t.value,
-      this.days.value, jsonp, res);
+  getCounts(city_id, form.low_t.value, form.high_t.value,
+      form.days.value, jsonp, res);
+  
+  function res(low_count, high_count) {
+    if (low_count == 0) {
+      log("none of the last days in", city, "had a low over", form.low_t.value);
+    } else {
+      log("the last", low_count, "days in", city, "had a low over",
+          form.low_t.value);
+      if (low_count == form.days.value) log("(of", form.days.value, "days)");
+      log("of those,", high_count, "days had a high over", form.high_t.value);
+    }
+  }
 }
 
 function log() {
   output.innerHTML += Array.prototype.join.call(arguments, " ") + "<br>";
 }
 
-function res(low_count, high_count) {
-  if (low_count == 0) {
-    log("none of the last", form.days.value, "days had a low over",
-        form.low_t.value);
-  } else {
-    log("the last", low_count, "days had a low over", form.low_t.value);
-    if (low_count == form.days.value) log("(of", form.days.value, "days)");
-    log("of those,", high_count, "days had a high over", form.high_t.value);
-  }
-}
+
 
 function ktof(k) {
   return Math.round(k * 9 / 5 - 459.67);
@@ -125,5 +127,17 @@ function Jsonp() {
     script.src = url + "&callback=" + jsonp_f;
     window[jsonp_f] = cb;
   };
+}
+
+function getCityId(data, city, cb, err) {
+  var cityUrl = 'http://api.openweathermap.org/data/2.1/find/name?q=' +
+      encodeURIComponent(city);
+  data.get(cityUrl, function (res) {
+    if (res && res.list && res.list.length) {
+      cb(res.list[0].id, res.list[0].name);
+    } else {
+      err();
+    }
+  });
 }
 </script>
