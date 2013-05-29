@@ -85,7 +85,7 @@ function getCounts(city_id, low_t, high_t, days, data, res) {
       }
     }
     
-    res(low_count, high_count);
+    res(highs, lows, low_count, high_count);
   }
 }
 
@@ -105,9 +105,10 @@ function getCountsWithCityId(city_id, city) {
   getCounts(city_id, form.low_t.value, form.high_t.value,
       form.days.value, jsonp, res);
   
-  function res(low_count, high_count) {
+  function res(highs, lows, low_count, high_count) {
     if (low_count == 0) {
       log("none of the last days in", city, "had a low over", form.low_t.value);
+      log("the last low was ", lows[lows.length - 1]);
     } else {
       log("the last", low_count, "days in", city, "had a low over",
           form.low_t.value);
