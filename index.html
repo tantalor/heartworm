@@ -27,9 +27,18 @@
 <div id="output" style="font-family:monospace"></div>
 
 <script type="text/javascript" charset="utf-8">
+function getTodaySeconds() {
+  var d = new Date();
+  d.setHours(0);
+  d.setMinutes(0);
+  d.setSeconds(0);
+  d.setMilliseconds(0);
+  return Math.floor(d.getTime() / 1000);
+}
+
 function getCounts(city_id, low_t, high_t, days, data, res) {
   var seconds_per_day = 60 * 60 * 24;
-  var end = Math.floor(new Date().getTime() / 1000) - seconds_per_day;
+  var end = getTodaySeconds() - seconds_per_day;
   var start = end - days * seconds_per_day;
   var historyUrl = "http://api.openweathermap.org/data/2.1/history/city/" +
       city_id + "?type=hour&start=" + start + "&end=" + end;
@@ -117,13 +126,21 @@ function ktof(k) {
 }
 
 function Jsonp() {
-  this.n = 1;
+  var n = 1;
+  var cache = {};
   this.get = function (url, cb) {
-    var script = document.body.appendChild(
-        document.createElement("script"));
-    var jsonp_f = "jsonp_f" + this.n++;
-    script.src = url + "&callback=" + jsonp_f;
-    window[jsonp_f] = cb;
+    if (url in cache) {
+      cb(cache[url]);
+    } else {
+      var script = document.body.appendChild(
+          document.createElement("script"));
+      var jsonp_f = "jsonp_f" + n++;
+      script.src = url + "&callback=" + jsonp_f;
+      window[jsonp_f] = function (res) {
+        cache[url] = res;
+        cb(res);
+      }
+    }
   };
 }
 
