@@ -88,12 +88,13 @@ function getCounts(city_id, low_t, high_t, days, data, res) {
 
 var form = document.getElementsByTagName("form")[0];
 var output = document.getElementById("output");
+var jsonp = new Jsonp();
 
 form.onsubmit = function (evt) {
   evt.preventDefault();
   log("working...");
   getCounts(form.city.value, this.low_t.value, this.high_t.value,
-      this.days.value, new Jsonp(), res);
+      this.days.value, jsonp, res);
 }
 
 function log() {
@@ -120,7 +121,7 @@ function Jsonp() {
   this.get = function (url, cb) {
     var script = document.body.appendChild(
         document.createElement("script"));
-    var jsonp_f = "json_f"+this.n++;
+    var jsonp_f = "jsonp_f" + this.n++;
     script.src = url + "&callback=" + jsonp_f;
     window[jsonp_f] = cb;
   };
